@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Structured Data Extraction Pipeline — Architecture</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --panel: #ffffff;
+      --line: #dde3ec;
+      --txt: #1c2330;
+      --muted: #69748a;
+      --input:  #4338ca;   /* indigo — document input        */
+      --extract:#1565c0;   /* blue   — model + schema         */
+      --valid:  #7c3aed;   /* violet — validation             */
+      --retry:  #16a34a;   /* green  — resolvable / retry      */
+      --human:  #C62828;   /* red    — human review / stop     */
+      --batch:  #b8860b;   /* gold   — scale / batch           */
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--txt);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 40px 20px 70px;
+    }
+    h1 { font-size: 28px; font-weight: 700; text-align: center; letter-spacing: -0.4px; margin: 0 0 6px; }
+    .subtitle { text-align: center; color: var(--muted); font-size: 15px; margin: 0 0 30px; }
+    .subtitle code { background:#eef1f6; padding:2px 7px; border-radius:5px; font-size:14px; }
+
+    .diagram { max-width: 1240px; margin: 0 auto; background: var(--panel);
+               border: 1px solid var(--line); border-radius: 18px;
+               padding: 28px 22px 14px; box-shadow: 0 12px 36px rgba(28,35,48,0.08); }
+    svg { width: 100%; height: auto; display: block; }
+
+    .node { border-radius: 14px; background:#fff; padding: 13px 14px; text-align:center;
+            box-shadow: 0 5px 14px rgba(28,35,48,0.10); height: 100%; }
+    .node .title { font-weight: 700; font-size: 15px; }
+    .node .desc  { font-size: 11.5px; color: var(--muted); margin-top: 5px; line-height: 1.45; }
+    .node.input   { border: 2px solid var(--input); }
+    .node.extract { border: 2px solid var(--extract); background:#f4f8fd; }
+    .node.valid   { border: 2px solid var(--valid); }
+    .node.retry   { border: 2px solid var(--retry); background:#f1fbf4; }
+    .node.human   { border: 3px solid var(--human); background:#fff7f7; }
+    .node.accept  { border: 2px solid var(--retry); }
+    .node.batch   { border: 2px dashed var(--batch); background:#fdfaf0; }
+
+    .badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px;
+             border-radius:6px; color:#fff; margin-top:7px; }
+    .badge.new { background: var(--human); }
+
+    .legend { max-width: 1240px; margin: 26px auto 0; display:grid;
+              grid-template-columns: repeat(auto-fit, minmax(360px,1fr)); gap:16px; }
+    .concept { background:#fff; border:1px solid var(--line); border-left:5px solid var(--valid);
+               border-radius:11px; padding:15px 17px; }
+    .concept.c-fab  { border-left-color: var(--extract); }
+    .concept.c-retry{ border-left-color: var(--retry); }
+    .concept.c-acc  { border-left-color: var(--human); }
+    .concept h3 { margin:0 0 7px; font-size:15px; }
+    .concept p  { margin:0; font-size:13px; color:var(--muted); line-height:1.55; }
+    .concept code { background:#eef1f6; padding:1px 6px; border-radius:5px; font-size:12px; }
+
+    .flab  { font-size:11.5px; font-weight:700; }
+    .fsub  { font-size:10.5px; font-weight:600; }
+  </style>
+</head>
+<body>
+  <h1>Structured Data Extraction Pipeline — Architecture</h1>
+  <p class="subtitle">CCA-F Exercise 3 · reliable extraction, not a perfect model · <code>claude-sonnet-4-6</code> + <code>pydantic</code></p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 1240 720" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="aMain" markerWidth="11" markerHeight="11" refX="8" refY="5.5" orient="auto"><path d="M0,0 L11,5.5 L0,11 z" fill="#1565c0"/></marker>
+        <marker id="aGreen" markerWidth="11" markerHeight="11" refX="8" refY="5.5" orient="auto"><path d="M0,0 L11,5.5 L0,11 z" fill="#16a34a"/></marker>
+        <marker id="aRed" markerWidth="11" markerHeight="11" refX="8" refY="5.5" orient="auto"><path d="M0,0 L11,5.5 L0,11 z" fill="#C62828"/></marker>
+        <marker id="aViolet" markerWidth="11" markerHeight="11" refX="8" refY="5.5" orient="auto"><path d="M0,0 L11,5.5 L0,11 z" fill="#7c3aed"/></marker>
+      </defs>
+
+      <!-- 1. DOCUMENT -->
+      <foreignObject x="30" y="60" width="200" height="92">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="node input">
+          <div class="title">Document(s)</div>
+          <div class="desc">Unstructured text, varied formats (narrative, tables, citations)</div>
+        </div>
+      </foreignObject>
+
+      <!-- 2. EXTRACT (tool_use + schema) -->
+      <foreignObject x="290" y="50" width="220" height="112">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="node extract">
+          <div class="title">extract_document</div>
+          <div class="desc">Claude + <b>tool_use</b> forces a JSON schema. nullable fields · enum + "other". <b>If absent → null, never fabricate.</b></div>
+        </div>
+      </foreignObject>
+
+      <!-- few-shot feeding into extract -->
+      <foreignObject x="290" y="190" width="220" height="74">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="node extract" style="background:#eef4fb">
+          <div class="title">few-shot examples</div>
+          <div class="desc">Varied formats → robustness to structure</div>
+        </div>
+      </foreignObject>
+
+      <!-- 3. VALIDATE -->
+      <foreignObject x="570" y="55" width="200" height="100">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="node valid">
+          <div class="title">validate (pydantic)</div>
+          <div class="desc">Schema check. On failure: is the error resolvable?</div>
+        </div>
+      </foreignObject>
+
+      <!-- 4a. RESOLVABLE -> RETRY -->
+      <foreignObject x="560" y="230" width="220" height="120">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="node retry">
+          <div class="title">resolvable? → retry</div>
+          <div class="desc"><b>Format error</b> (e.g. number as string) → follow-up with doc + bad output + specific error. Max N retries.</div>
+          <span class="badge" style="background:#16a34a">RETRY FIXES IT</span>
+        </div>
+      </foreignObject>
+
+      <!-- 4b. UNRESOLVABLE -> HUMAN -->
+      <foreignObject x="560" y="430" width="220" height="120">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="node human">
+          <div class="title">unresolvable → stop</div>
+          <div class="desc"><b>Info absent from source</b> → retry NEVER fixes it (infinite-loop trap). Route to human, don't retry.</div>
+          <span class="badge new">RETRY WASTES $</span>
+        </div>
+      </foreignObject>
+
+      <!-- 5. CONFIDENCE ROUTING -->
+      <foreignObject x="850" y="55" width="210" height="112">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="node valid" style="border-color:#C62828">
+          <div class="title">confidence routing</div>
+          <div class="desc">Field-level confidence. &lt; threshold → human review (flag only suspect fields).</div>
+          <span class="badge new">NEW</span>
+        </div>
+      </foreignObject>
+
+      <!-- auto-accept -->
+      <foreignObject x="1075" y="40" width="140" height="78">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="node accept">
+          <div class="title">auto-accept</div>
+          <div class="desc">High confidence, valid</div>
+        </div>
+      </foreignObject>
+      <!-- human review -->
+      <foreignObject x="1075" y="140" width="140" height="86">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="node human">
+          <div class="title">human review</div>
+          <div class="desc">Low conf / unresolvable</div>
+        </div>
+      </foreignObject>
+
+      <!-- 6. BATCH SCALE LAYER -->
+      <foreignObject x="850" y="300" width="365" height="150">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="node batch" style="text-align:left">
+          <div class="title" style="text-align:center">Scale layer — Batch processing</div>
+          <div class="desc" style="margin-top:8px">
+            100 docs → <b>Message Batches API</b> (~50% cheaper, ≤24h, no latency SLA)<br/>
+            • match results by <b>custom_id</b> (order is not preserved)<br/>
+            • failures → chunk oversized docs → resubmit only those<br/>
+            • <b>batch ≠ multi-turn</b>: do validation-retry OUTSIDE the batch<br/>
+            • decision: someone waiting? → sync. overnight? → batch
+          </div>
+        </div>
+      </foreignObject>
+
+      <!-- accuracy note -->
+      <foreignObject x="850" y="470" width="365" height="92">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="node valid" style="border-style:dashed;text-align:left">
+          <div class="title" style="text-align:center">Accuracy analysis</div>
+          <div class="desc" style="margin-top:6px">Measure by <b>doc_type × field</b>, not aggregate. 95% overall can hide a 40% cell (invoice/total_amount).</div>
+        </div>
+      </foreignObject>
+
+      <!-- ARROWS -->
+      <path d="M232,106 L286,106" stroke="#1565c0" stroke-width="2.5" fill="none" marker-end="url(#aMain)"/>
+      <path d="M400,190 L400,166" stroke="#1565c0" stroke-width="2.5" fill="none" marker-end="url(#aMain)"/>
+      <text x="408" y="184" class="fsub" fill="#1565c0">guides</text>
+      <path d="M512,106 L566,106" stroke="#1565c0" stroke-width="2.5" fill="none" marker-end="url(#aMain)"/>
+
+      <!-- validate -> confidence (valid path) -->
+      <path d="M772,95 L846,100" stroke="#7c3aed" stroke-width="2.5" fill="none" marker-end="url(#aViolet)"/>
+      <text x="780" y="88" class="flab" fill="#7c3aed">valid →</text>
+
+      <!-- validate -> resolvable -->
+      <path d="M660,157 L665,226" stroke="#16a34a" stroke-width="2.5" fill="none" marker-end="url(#aGreen)"/>
+      <text x="672" y="200" class="fsub" fill="#16a34a">format err</text>
+      <!-- resolvable retry loop back to extract/validate -->
+      <path d="M620,348 C470,400 470,150 568,120" stroke="#16a34a" stroke-width="2.5" fill="none" stroke-dasharray="7 4" marker-end="url(#aGreen)"/>
+      <text x="455" y="280" class="fsub" fill="#16a34a">retry ↺ (≤ N)</text>
+      <!-- resolvable -> unresolvable (after max) -->
+      <path d="M670,352 L670,426" stroke="#C62828" stroke-width="2.5" fill="none" marker-end="url(#aRed)"/>
+      <text x="676" y="400" class="fsub" fill="#C62828">max retries</text>
+
+      <!-- validate -> unresolvable (info absent) -->
+      <path d="M610,157 C540,300 540,470 558,490" stroke="#C62828" stroke-width="2.5" fill="none" marker-end="url(#aRed)"/>
+      <text x="500" y="430" class="fsub" fill="#C62828">info absent</text>
+
+      <!-- confidence -> auto-accept / human -->
+      <path d="M1062,95 L1071,80" stroke="#16a34a" stroke-width="2.5" fill="none" marker-end="url(#aGreen)"/>
+      <path d="M1062,128 L1071,160" stroke="#C62828" stroke-width="2.5" fill="none" marker-end="url(#aRed)"/>
+      <!-- unresolvable -> human review -->
+      <path d="M782,490 C950,470 1010,250 1075,196" stroke="#C62828" stroke-width="2.5" fill="none" stroke-dasharray="7 4" marker-end="url(#aRed)"/>
+    </svg>
+  </div>
+
+  <div class="legend">
+    <div class="concept c-fab">
+      <h3>tool_use + nullable → no fabrication</h3>
+      <p>A schema-bound <code>tool_use</code> guarantees valid JSON (no parse errors). Fields that may be absent are <code>Optional</code>/nullable with "if absent, null" — so the model returns <code>null</code> instead of inventing a value.</p>
+    </div>
+    <div class="concept c-retry">
+      <h3>resolvable vs unresolvable errors</h3>
+      <p><b>Format mismatch</b> (wrong type/enum) → retry with the specific error fixes it. <b>Info absent from source</b> → retry never fixes it; retrying is an infinite-loop money trap. Classify, then route the unresolvable to a human.</p>
+    </div>
+    <div class="concept c-acc">
+      <h3>field-level confidence &amp; accuracy</h3>
+      <p>Per-field confidence routes low-confidence extractions to human review. Measure accuracy by <b>doc_type × field</b>, not a single aggregate — 95% overall can mask a 40% cell.</p>
+    </div>
+  </div>
+</body>
+</html>

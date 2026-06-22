@@ -1,0 +1,24 @@
+INVOICE — REF: 8821-B
+
+Date of Issue: 2025-05-02
+
+Please remit payment of $3,150.00 for web development services
+provided during April 2025.
+
+LINE ITEMS
+---------------------------------
+| Description         | Amount  |
+|---------------------|---------|
+| Frontend build      | $1,800  |
+| API integration     | $1,350  |
+---------------------------------
+| TOTAL               | $3,150  |
+---------------------------------
+
+Payment instructions: wire to account on file.
+
+-- end of document --
+
+NOTE FOR PIPELINE TESTING: vendor name is absent, due date is absent,
+tax ID is absent. The model must return null for those fields rather
+than fabricating plausible values.

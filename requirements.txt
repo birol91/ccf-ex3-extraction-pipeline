@@ -1,0 +1,4 @@
+anthropic
+pydantic
+opendataloader-pdf
+python-dotenv

@@ -1,0 +1,26 @@
+INVOICE
+---------------------------------------------------------------
+Invoice Number : HCS-2025-0471
+Invoice Date   : 2025-03-14
+Due Date       : 2025-04-13
+Vendor         : Hartwell Consulting Services
+Vendor Address : 42 Commerce Lane, Suite 300, Boston, MA 02110
+Vendor Tax ID  : 47-2938510
+Bill To        : Acme Corp, Procurement Dept
+---------------------------------------------------------------
+
+LINE ITEMS
+---------------------------------------------------------------
+| # | Description                   | Qty | Unit Price | Total   |
+|---|-------------------------------|-----|------------|---------|
+| 1 | Strategic Planning Workshops  |   1 | $6,000.00  | $6,000.00 |
+| 2 | Written Deliverables Package  |   1 | $2,400.50  | $2,400.50 |
+---------------------------------------------------------------
+| Subtotal                                          | $8,400.50 |
+| Discount                                          |     $0.00 |
+| Tax (0%)                                          |     $0.00 |
+| TOTAL DUE                                         | $8,400.50 |
+---------------------------------------------------------------
+
+Payment method: Bank transfer
+Notes: Net 30 terms. Please reference invoice number on transfer.

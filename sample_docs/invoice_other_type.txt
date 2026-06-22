@@ -1,0 +1,27 @@
+CREDIT NOTE
+
+Credit Note Number : CN-2025-0089
+Original Invoice   : HCS-2025-0431
+Issue Date         : 2025-04-01
+Issued By          : Hartwell Consulting Services
+Issued To          : Acme Corp, Procurement Dept
+
+Reason for Credit:
+Services on invoice HCS-2025-0431 were partially delivered. Per mutual
+agreement, a credit of $1,200.00 is issued against the original billed
+amount of $5,000.00. The remaining balance of $3,800.00 was settled.
+
+CREDIT SUMMARY
+-----------------------------------------
+| Original Invoice Total | $5,000.00    |
+| Credit Amount          | ($1,200.00)  |
+| Net Amount Settled     | $3,800.00    |
+-----------------------------------------
+
+This credit note should be applied to your next billing cycle or
+refunded via the original payment method within 14 business days.
+
+NOTE FOR PIPELINE TESTING: this document is a credit note, not a standard
+invoice. The pipeline should classify doc_type as "other" and populate
+doc_type_detail with a description such as "credit note". It must NOT
+force-fit this into "invoice" or any other fixed enum value.
